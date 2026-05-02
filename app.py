@@ -8,11 +8,12 @@ from facenet_pytorch import MTCNN, InceptionResnetV1
 # --- הגדרות עיצוב לדף ---
 st.set_page_config(page_title="זיהוי פנים - פרויקט גמר", page_icon="🎭", layout="centered")
 
-# 💡 הוספת קוד עיצוב (CSS) שהופך את התצוגה החיה של המצלמה ל"מראה"
+# 💡 הוספת קוד עיצוב (CSS) שהופך גם את הוידאו החי וגם את התמונה המצולמת ל"מראה"
 st.markdown(
     """
     <style>
-    [data-testid="stCameraInput"] video {
+    [data-testid="stCameraInput"] video,
+    [data-testid="stCameraInput"] img {
         transform: scaleX(-1);
     }
     </style>
@@ -60,9 +61,9 @@ with tab2:
 if image_file is not None:
     # פתיחת התמונה
     img = Image.open(image_file)
-    img = ImageOps.exif_transpose(img) # תיקון סיבוב 90 מעלות
+    img = ImageOps.exif_transpose(img) # תיקון סיבוב 90 מעלות לטלפונים
     
-    # 💡 היפוך התמונה (אפקט מראה) יבוצע רק אם התמונה צולמה במצלמה
+    # 💡 היפוך התמונה (אפקט מראה) בקוד כדי שהמודל והתצוגה יראו תמונה ישרה
     if is_camera:
         img = ImageOps.mirror(img)
         
