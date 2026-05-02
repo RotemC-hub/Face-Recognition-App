@@ -8,6 +8,18 @@ from facenet_pytorch import MTCNN, InceptionResnetV1
 # --- הגדרות עיצוב לדף ---
 st.set_page_config(page_title="זיהוי פנים - פרויקט גמר", page_icon="🎭", layout="centered")
 
+# 💡 הוספת קוד עיצוב (CSS) שהופך את התצוגה החיה של המצלמה ל"מראה"
+st.markdown(
+    """
+    <style>
+    [data-testid="stCameraInput"] video {
+        transform: scaleX(-1);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("🎭 מערכת לזיהוי פנים")
 st.write("פרויקט גמר בבינה מלאכותית. העלו תמונה או צלמו כדי לזהות מי בתמונה!")
 
@@ -26,27 +38,34 @@ device, mtcnn, resnet, model = load_models()
 CLASS_NAMES = ['asaf', 'danny', 'eitan', 'harel', 'ilay', 'kiril', 'lior', 
                'ofir', 'ofri', 'omri', 'rotem', 'segev', 'semyon', 'yuval']
 
-# --- בחירת תמונה עם טאבים (למניעת בעיות רענון בטלפון) ---
-# שימוש בלשוניות במקום st.radio שומר על התמונה זיכרון ולא מוחק אותה בטעות
+# --- בחירת תמונה עם טאבים ---
 tab1, tab2 = st.tabs(["📸 הפעל מצלמה", "📂 העלאת קובץ מגלריה"])
 
 image_file = None
+is_camera = False # משתנה שזוכר מאיפה הגיעה התמונה
 
 with tab1:
     camera_img = st.camera_input("צלמו תמונה כאן")
     if camera_img:
         image_file = camera_img
+        is_camera = True # סימון שהתמונה הגיעה מהמצלמה
 
 with tab2:
     uploaded_img = st.file_uploader("בחרו תמונה", type=['jpg', 'jpeg', 'png'])
     if uploaded_img:
         image_file = uploaded_img
+        is_camera = False # סימון שהתמונה הגיעה מהגלריה
 
 # --- תהליך הזיהוי ---
 if image_file is not None:
-    # פתיחת התמונה ותיקון הסיבוב האוטומטי (EXIF)
+    # פתיחת התמונה
     img = Image.open(image_file)
-    img = ImageOps.exif_transpose(img) # התיקון ל-90 מעלות!
+    img = ImageOps.exif_transpose(img) # תיקון סיבוב 90 מעלות
+    
+    # 💡 היפוך התמונה (אפקט מראה) יבוצע רק אם התמונה צולמה במצלמה
+    if is_camera:
+        img = ImageOps.mirror(img)
+        
     img = img.convert('RGB')
     
     st.image(img, caption="התמונה שהוזנה", use_container_width=True)
