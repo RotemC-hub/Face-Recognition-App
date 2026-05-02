@@ -2,7 +2,7 @@ import streamlit as st
 import torch
 import joblib
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 from facenet_pytorch import MTCNN, InceptionResnetV1
 
 # --- הגדרות עיצוב לדף ---
@@ -12,35 +12,43 @@ st.title("🎭 מערכת לזיהוי פנים")
 st.write("פרויקט גמר בבינה מלאכותית. העלו תמונה או צלמו כדי לזהות מי בתמונה!")
 
 # --- טעינת מודלים ---
-# אנו משתמשים ב-cache כדי שהמודל הכבד ייטען רק פעם אחת ולא בכל לחיצת כפתור
 @st.cache_resource
 def load_models():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     mtcnn = MTCNN(image_size=160, margin=20, device=device)
     resnet = InceptionResnetV1(pretrained='vggface2').eval().to(device)
-    # טעינת מודל ה-MLP/SVM שאימנת
     model = joblib.load('face_model.pkl')
     return device, mtcnn, resnet, model
 
 device, mtcnn, resnet, model = load_models()
 
-# רשימת השמות (חובה שיהיה באותו סדר כמו ב-Colab)
+# רשימת השמות
 CLASS_NAMES = ['asaf', 'danny', 'eitan', 'harel', 'ilay', 'kiril', 'lior', 
                'ofir', 'ofri', 'omri', 'rotem', 'segev', 'semyon', 'yuval']
 
-# --- בחירת תמונה (מצלמה או גלריה) ---
-option = st.radio("איך תרצו להזין תמונה?", ("הפעל מצלמה", "העלאת קובץ מגלריה/מחשב"))
+# --- בחירת תמונה עם טאבים (למניעת בעיות רענון בטלפון) ---
+# שימוש בלשוניות במקום st.radio שומר על התמונה זיכרון ולא מוחק אותה בטעות
+tab1, tab2 = st.tabs(["📸 הפעל מצלמה", "📂 העלאת קובץ מגלריה"])
 
 image_file = None
-if option == "הפעל מצלמה":
-    image_file = st.camera_input("צלמו תמונה כאן")
-else:
-    image_file = st.file_uploader("בחרו תמונה", type=['jpg', 'jpeg', 'png'])
+
+with tab1:
+    camera_img = st.camera_input("צלמו תמונה כאן")
+    if camera_img:
+        image_file = camera_img
+
+with tab2:
+    uploaded_img = st.file_uploader("בחרו תמונה", type=['jpg', 'jpeg', 'png'])
+    if uploaded_img:
+        image_file = uploaded_img
 
 # --- תהליך הזיהוי ---
 if image_file is not None:
-    # פתיחת התמונה
-    img = Image.open(image_file).convert('RGB')
+    # פתיחת התמונה ותיקון הסיבוב האוטומטי (EXIF)
+    img = Image.open(image_file)
+    img = ImageOps.exif_transpose(img) # התיקון ל-90 מעלות!
+    img = img.convert('RGB')
+    
     st.image(img, caption="התמונה שהוזנה", use_container_width=True)
     
     with st.spinner("מנתח את התמונה... 🔍"):
